@@ -1,0 +1,50 @@
+
+def run_hyperparameter_grid(parameters ):
+    np.random.seed(0)
+    umapparams ,hdbscanparams = parameters
+    out = []
+    temp={}
+    for i_1 in umapparams["n_neighbors"]:
+        for i_2 in umapparams["n_components"]:
+            for i_3 in hdbscanparams["min_cluster_size"]:
+                for i_4 in hdbscanparams["cluster_selection_epsilon"]:
+                    umap_model = umap.UMAP( n_neighbors=i_1,
+                                            n_components=i_2,
+                                            min_dist=0.0,
+                                            metric='cosine',
+                                            random_state=0, 
+                                            low_memory=False)
+                    hdbscan_model = hdbscan.HDBSCAN(min_cluster_size=i_3,
+                                                    metric='euclidean',
+                                                    cluster_selection_method='eom',
+                                                    cluster_selection_epsilon=i_4,
+                                                    prediction_data=True)
+                    topic_model = BERTopic(verbose=True,
+                                           umap_model=umap_model,
+                                           hdbscan_model=hdbscan_model,
+                                           top_n_words = 20,
+                                           calculate_probabilities = True,
+                                           n_gram_range=(1, 3))
+                    start_time = time.time()
+                    print("topic model running" + str(topic_model))
+                    try:
+                        topics, _ = topic_model.fit_transform(docs)
+                    except Exception as e :
+                        print(e)
+params = []
+out = []
+params.append(({"n_neighbors" : [10],"n_components" : [2]} ,{"min_cluster_size" : [10],"cluster_selection_epsilon" : [0.02]}))
+
+params.append(({"n_neighbors" : [15],"n_components" : [2]}, {"min_cluster_size" : [10],"cluster_selection_epsilon" : [0.02]}))
+
+params.append(({"n_neighbors" : [20],"n_components" : [2]} ,{"min_cluster_size" : [10],"cluster_selection_epsilon" : [0.02]}))
+from multiprocessing import Pool, cpu_count
+try:
+    workers = cpu_count()
+    print(workers)
+except NotImplementedError:
+    workers = 1
+pool = Pool(processes=workers)
+result = pool.map(run_hyperparameter_grid, params)
+pool.terminate()
+print("done fitting.")
